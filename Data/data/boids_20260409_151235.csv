@@ -1,0 +1,3 @@
+﻿Iteration,wSeparation,wAlignment,wCohesion,wWaypoint,s_wSeparation,s_wAlignment,s_wCohesion,s_wWaypoint,SecondaryFraction,MeanTransit,Throughput,TotalCollisions,BoidBoidCollisions,BoidWallCollisions,Finished,Spawned
+1,2,1,0.5,2,5,1,0.5,2,0,60.039,5.000,790,790,0,499,500
+2,2,1,0.5,2,5,1,0.5,2,0,59.606,6.106,774,774,0,500,500

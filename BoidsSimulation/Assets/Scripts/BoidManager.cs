@@ -55,6 +55,7 @@ public class BoidManager : MonoBehaviour
 
     [Header("Iteration & Speed")]
     [Range(1, 100)] public int iterations = 1;
+    public float maxIterationTime = 100f;
     [Range(1f, 10f)] public float simSpeedScale = 1f;
 
     [Header("Collision Detection")]
@@ -123,6 +124,13 @@ public class BoidManager : MonoBehaviour
         {
             Simulate();
             TickThroughputWindow();
+
+            if (Time.time - simStart >= maxIterationTime)
+            {
+                Debug.Log("[Boids] Iteration timed out at " + maxIterationTime + " seconds.");
+                FinishIteration();
+            }
+
         }
     }
 
@@ -388,17 +396,27 @@ public class BoidManager : MonoBehaviour
         int wi = wpIndex[i];
         if (wi >= waypoints.Count) return Vector3.zero;
 
-        // Progress to next waypoint if the boid passed through the waypoint's plane
+        // If the boid crossed the CURRENT waypoint rectangle/plane
         if (waypoints[wi].HasCrossed(cPrevPos[i], pos))
         {
-            wi++;
-            if (wi >= waypoints.Count)
+            // If this was the LAST waypoint, finish immediately
+            if (wi == waypoints.Count - 1)
             {
-                if (loop) { wi = 1; wpIndex[i] = wi; wpOffset[i] = RandomDoorOffset(wi); }
-                else { finished = true; return Vector3.zero; }
+                if (loop)
+                {
+                    wi = 1; // keep waypoint 0 as spawn/start
+                    wpIndex[i] = wi;
+                    wpOffset[i] = RandomDoorOffset(wi);
+                }
+                else
+                {
+                    finished = true;
+                    return Vector3.zero;
+                }
             }
             else
             {
+                wi++;
                 wpIndex[i] = wi;
                 wpOffset[i] = RandomDoorOffset(wi);
             }
@@ -406,10 +424,12 @@ public class BoidManager : MonoBehaviour
 
         BoidWaypoint wp = waypoints[wi];
         Vector3 centre = new Vector3(wp.transform.position.x, floorY, wp.transform.position.z);
-        Vector3 goal = centre + wp.transform.right * wpOffset[i]; // Apply lateral offset
+        Vector3 goal = centre + wp.transform.right * wpOffset[i];
         goal.y = floorY;
 
-        Vector3 toGoal = goal - pos; toGoal.y = 0f;
+        Vector3 toGoal = goal - pos;
+        toGoal.y = 0f;
+
         if (toGoal.sqrMagnitude < 0.001f) return Vector3.zero;
         return Seek(vel, toGoal.normalized * maxSpeed) * weight;
     }
@@ -510,38 +530,41 @@ public class BoidManager : MonoBehaviour
     void SaveCSV()
     {
         var lines = new List<string>();
-        lines.Add("Iteration,Duration,Throughput,MeanTransit,MinTransit,MaxTransit,BoidBoidCol,BoidWallCol,TotalCol,Finished,Spawned");
+
+        // Header
+        lines.Add(
+            "Iteration," +
+            "wSeparation,wAlignment,wCohesion,wWaypoint," +
+            "s_wSeparation,s_wAlignment,s_wCohesion,s_wWaypoint," +
+            "SecondaryFraction," +
+            "MeanTransit,Throughput,TotalCollisions,BoidBoidCollisions,BoidWallCollisions," +
+            "Finished,Spawned"
+        );
 
         foreach (var r in results)
-            lines.Add($"{r.iteration},{r.duration:F3},{r.throughput:F3},{r.meanTransit:F3},{r.minTransit:F3},{r.maxTransit:F3},{r.colBoidBoid},{r.colBoidWall},{r.totalCol},{r.finished},{r.spawned}");
+        {
+            lines.Add(
+                $"{r.iteration}," +
+                $"{wSeparation},{wAlignment},{wCohesion},{wWaypoint}," +
+                $"{s_wSeparation},{s_wAlignment},{s_wCohesion},{s_wWaypoint}," +
+                $"{secondaryFraction}," +
+                $"{r.meanTransit:F3},{r.throughput:F3},{r.totalCol},{r.colBoidBoid},{r.colBoidWall}," +
+                $"{r.finished},{r.spawned}"
+            );
+        }
 
-        lines.Add("");
-        lines.Add("--- Averaged over " + results.Count + " iterations ---");
-        lines.Add($"Avg Duration,{Avg(r => r.duration):F3}");
-        lines.Add($"Avg Throughput,{Avg(r => r.throughput):F3}");
-        lines.Add($"Avg MeanTransit,{Avg(r => r.meanTransit):F3}");
-        lines.Add($"Avg MinTransit,{Avg(r => r.minTransit):F3}");
-        lines.Add($"Avg MaxTransit,{Avg(r => r.maxTransit):F3}");
-        lines.Add($"Avg BoidBoidCollisions,{Avg(r => r.colBoidBoid):F2}");
-        lines.Add($"Avg BoidWallCollisions,{Avg(r => r.colBoidWall):F2}");
-        lines.Add($"Avg TotalCollisions,{Avg(r => r.totalCol):F2}");
+        string folder = Path.Combine(Application.dataPath, "..", "..", "Data", "data");
 
-        lines.Add("");
-        lines.Add("--- Configuration ---");
-        lines.Add($"BoidCount,{boidCount}");
-        lines.Add($"Iterations,{iterations}");
-        lines.Add($"SecondaryFraction,{secondaryFraction}");
-        lines.Add($"wSeparation,{wSeparation} s_wSeparation,{s_wSeparation}");
-        lines.Add($"wAlignment,{wAlignment} s_wAlignment,{s_wAlignment}");
-        lines.Add($"wCohesion,{wCohesion} s_wCohesion,{s_wCohesion}");
-        lines.Add($"wWaypoint,{wWaypoint} s_wWaypoint,{s_wWaypoint}");
-        lines.Add($"minSpeed,{minSpeed} maxSpeed,{maxSpeed}");
-        lines.Add($"perceptionRadius,{perceptionRadius}");
-        lines.Add($"separationRadius,{separationRadius}");
+        if (!Directory.Exists(folder))
+            Directory.CreateDirectory(folder);
 
-        string path = Path.Combine(Application.persistentDataPath, $"boids_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        string path = Path.Combine(
+            folder,
+            $"boids_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv"
+        );
+
         File.WriteAllLines(path, lines.ToArray(), Encoding.UTF8);
-        Debug.Log($"[Boids] All {results.Count} iterations saved to: {path}");
+        Debug.Log($"[Boids] Results saved to: {Path.GetFullPath(path)}");
     }
 
     float Avg(System.Func<IterationResult, float> selector)
@@ -555,13 +578,105 @@ public class BoidManager : MonoBehaviour
     void OnGUI()
     {
         if (!showHUD) return;
-        // HUD rendering logic...
+
+        float dur = Time.time - simStart;
+        float tp = spawned > 0 ? finished / Mathf.Max(0.001f, dur) : 0f;
+
+        var sb = new StringBuilder();
+
+        if (allDone)
+        {
+            sb.AppendLine("=== ALL DONE ===");
+            sb.AppendLine($"Iterations: {results.Count}");
+            sb.AppendLine($"Avg duration   {Avg(r => r.duration):F2} s");
+            sb.AppendLine($"Avg throughput {Avg(r => r.throughput):F2} /s");
+            sb.AppendLine($"Avg transit    {Avg(r => r.meanTransit):F2} s");
+            sb.AppendLine($"Avg collisions {Avg(r => r.totalCol):F1}");
+            sb.AppendLine("[CSV saved]");
+        }
+        else
+        {
+            sb.AppendLine($"=== Run {currentIteration} / {iterations} ===");
+            sb.AppendLine($"Speed x{simSpeedScale:F1}");
+            sb.AppendLine($"Time       {dur:F1} s");
+            sb.AppendLine($"Active     {boids.Count}");
+            sb.AppendLine($"Finished   {finished} / {spawned}");
+            sb.AppendLine($"Throughput {tp:F2} /s");
+            sb.AppendLine($"Tp (5s)    {tpRecent:F2} /s");
+            sb.AppendLine($"Transit    {MeanTransit():F2} s (mean)");
+            sb.AppendLine($"Boid hits  {colBoidBoid}");
+            sb.AppendLine($"Wall hits  {colBoidWall}");
+            if (results.Count > 0)
+            {
+                sb.AppendLine($"--- prev avg ---");
+                sb.AppendLine($"Transit  {Avg(r => r.meanTransit):F2} s");
+                sb.AppendLine($"Col      {Avg(r => r.totalCol):F1}");
+            }
+        }
+
+        GUIStyle st = new GUIStyle(GUI.skin.box)
+        {
+            alignment = TextAnchor.UpperLeft,
+            fontSize = 13
+        };
+        st.normal.textColor = Color.white;
+
+        float w = 230f, h = allDone ? 170f : 280f;
+        GUI.Box(new Rect(hudPosition.x, hudPosition.y, w, h), sb.ToString(), st);
+
+        if (allDone && GUI.Button(
+            new Rect(hudPosition.x, hudPosition.y + h + 4f, w, 24f), "Save CSV Again"))
+        {
+            SaveCSV();
+        }
     }
+
+  
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
-        // Gizmo visualization for waypoints, perception, and obstacle rays...
+        if (waypoints.Count == 0)
+        {
+            Gizmos.color = new Color(0f, 1f, 1f, 0.4f);
+            Gizmos.DrawWireCube(new Vector3(0, floorY, 0),
+                new Vector3(boundaryHalfSize * 2, 0.05f, boundaryHalfSize * 2));
+        }
+
+        for (int i = 1; i < waypoints.Count; i++)
+        {
+            if (waypoints[i] == null) continue;
+            bool isLast = i == waypoints.Count - 1 && !loop;
+            Gizmos.color = isLast ? Color.red : Color.yellow;
+            int prev = i == 1 ? 0 : i - 1;
+            if (waypoints[prev] != null)
+                Gizmos.DrawLine(waypoints[prev].transform.position,
+                                waypoints[i].transform.position);
+        }
+
+        if (boids != null && boids.Count > 0 && boids[0] != null
+            && obstacleLayer.value != 0)
+        {
+            Vector3 bp = boids[0].pos;
+            Vector3 fwd = boids[0].velocity; fwd.y = 0f;
+            if (fwd.sqrMagnitude > 0.001f)
+            {
+                fwd = fwd.normalized;
+                float stp = obstacleFanRays > 1
+                            ? obstacleFanAngle * 2f / (obstacleFanRays - 1) : 0f;
+                for (int r = 0; r < obstacleFanRays; r++)
+                {
+                    float a = -obstacleFanAngle + stp * r;
+                    Vector3 d = Quaternion.AngleAxis(a, Vector3.up) * fwd;
+                    Gizmos.color = new Color(1f, 0.5f, 0f, 0.35f);
+                    Gizmos.DrawRay(new Vector3(bp.x, floorY + 0.1f, bp.z), d * obstacleDistance);
+                }
+            }
+            Gizmos.color = new Color(0f, 1f, 0f, 0.2f);
+            Gizmos.DrawWireSphere(bp, perceptionRadius);
+            Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
+            Gizmos.DrawWireSphere(bp, separationRadius);
+        }
     }
 #endif
 }
