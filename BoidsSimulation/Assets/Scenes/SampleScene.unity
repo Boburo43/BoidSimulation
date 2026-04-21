@@ -689,7 +689,7 @@ Camera:
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
-  m_FOVAxisMode: 0
+  m_FOVAxisMode: 1
   m_Iso: 200
   m_ShutterSpeed: 0.005
   m_Aperture: 16
@@ -709,7 +709,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 58.711254
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -735,13 +735,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 87.6, z: 0.7}
+  m_LocalRotation: {x: 0.5575875, y: -0.43485194, z: 0.43485194, w: 0.5575875}
+  m_LocalPosition: {x: 0, y: 250, z: 0.7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: -75.9, z: 0}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1497,11 +1497,11 @@ MonoBehaviour:
   wAlignment: 1
   wCohesion: 0.5
   wWaypoint: 2
-  secondaryFraction: 0
+  secondaryFraction: 0.5
   secondaryColor: {r: 1, g: 0.35, b: 0.1, a: 1}
-  s_wSeparation: 5
+  s_wSeparation: 1.5
   s_wAlignment: 1
-  s_wCohesion: 0.5
+  s_wCohesion: 0.7
   s_wWaypoint: 2
   obstacleLayer:
     serializedVersion: 2
@@ -1521,6 +1521,7 @@ MonoBehaviour:
   boundaryHalfSize: 50
   boundaryWeight: 2
   iterations: 20
+  maxIterationTime: 100
   simSpeedScale: 2
   collisionRadius: 1
   collisionGracePeriod: 1
