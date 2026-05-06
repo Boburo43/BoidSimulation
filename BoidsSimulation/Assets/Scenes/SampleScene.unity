@@ -1497,12 +1497,12 @@ MonoBehaviour:
   wAlignment: 1
   wCohesion: 0.5
   wWaypoint: 2
-  secondaryFraction: 0.5
+  secondaryFraction: 0
   secondaryColor: {r: 1, g: 0.35, b: 0.1, a: 1}
-  s_wSeparation: 1.5
-  s_wAlignment: 1
-  s_wCohesion: 0.7
-  s_wWaypoint: 2
+  s_wSeparation: 2
+  s_wAlignment: 0.2
+  s_wCohesion: 0.5
+  s_wWaypoint: 0.5
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 4294967295
